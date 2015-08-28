@@ -9,14 +9,18 @@ import org.apache.logging.log4j.Logger;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
 
-public class ASMTweaksManager {
+import net.minecraft.launchwrapper.IClassTransformer;
+
+import com.hea3ven.tools.mappings.ClsMapping;
+import com.hea3ven.tools.mappings.FldMapping;
+import com.hea3ven.tools.mappings.Mapping;
+import com.hea3ven.tools.mappings.MthdMapping;
+
+public class ASMTweaksManager implements IClassTransformer {
 
 	private static Logger logger = LogManager.getLogger("asmtweaks.ASMTweaksManager");
 
 	private String currentVersion;
-	private HashSet<ObfuscatedClass> classes = new HashSet<ObfuscatedClass>();
-	private HashSet<ObfuscatedMethod> methods = new HashSet<ObfuscatedMethod>();
-	private HashSet<ObfuscatedField> fields = new HashSet<ObfuscatedField>();
 
 	private boolean detectedObfuscation = false;
 	private boolean obfuscated = false;
@@ -24,6 +28,9 @@ public class ASMTweaksManager {
 	private ASMTweaksConfig config;
 
 	private HashSet<ASMTweak> tweaks = Sets.newHashSet();
+	private HashSet<ClsMapping> clssToTweak = Sets.newHashSet();
+
+	private Mapping mapping;
 
 	public ASMTweaksManager(String currentVersion) {
 		logger.info("using mappings for version {}", currentVersion);
@@ -45,43 +52,20 @@ public class ASMTweaksManager {
 		return config;
 	}
 
-	public void add(ObfuscatedClass cls) {
-		classes.add(cls);
+	public void setMapping(Mapping mapping) {
+		this.mapping = mapping;
 	}
 
-	public void add(ObfuscatedMethod method) {
-		methods.add(method);
+	public ClsMapping getClass(String className) {
+		return mapping.getCls(className);
 	}
 
-	public void add(ObfuscatedField field) {
-		fields.add(field);
+	public MthdMapping getMethod(String methodName) {
+		return mapping.getMthd(methodName);
 	}
 
-	public ObfuscatedClass getClass(String className) {
-		for (ObfuscatedClass cls : classes) {
-			if (className.equals(cls.getName()) || className.equals(cls.getObfName())) {
-				return cls;
-			}
-		}
-		return null;
-	}
-
-	public ObfuscatedMethod getMethod(String methodName) {
-		for (ObfuscatedMethod method : methods) {
-			if (methodName.equals(method.getName()) || methodName.equals(method.getObfName())) {
-				return method;
-			}
-		}
-		return null;
-	}
-
-	public ObfuscatedField getField(String fieldName) {
-		for (ObfuscatedField field : fields) {
-			if (fieldName.equals(field.getName()) || fieldName.equals(field.getObfName())) {
-				return field;
-			}
-		}
-		return null;
+	public FldMapping getField(String fieldName) {
+		return mapping.getFld(fieldName);
 	}
 
 	public void addTweak(ASMTweak tweak) {
@@ -90,59 +74,35 @@ public class ASMTweaksManager {
 			tweaks.add(tweak);
 			for (ASMMod mod : tweak.getModifications()) {
 				if (mod instanceof ASMClassMod) {
-					ASMClassMod clsMod = (ASMClassMod) mod;
-					if (getClass(clsMod.getClassName()) == null) {
-						VersionMapping obfNames = new VersionMapping();
-						obfNames.add(".*", clsMod.getClassName());
-						add(new ObfuscatedClass(this, clsMod.getClassName(), obfNames));
-					}
+					clssToTweak.add(getClass(((ASMClassMod) mod).getClassName()));
 				} else if (mod instanceof ASMMethodMod) {
-					ASMMethodMod mthdMod = (ASMMethodMod) mod;
-					if (getClass(mthdMod.getClassName()) == null) {
-						VersionMapping obfNames = new VersionMapping();
-						obfNames.add(".*", mthdMod.getClassName());
-						add(new ObfuscatedClass(this, mthdMod.getClassName(), obfNames));
-					}
-					if (getMethod(mthdMod.getMethodName()) == null) {
-						VersionMapping obfNames = new VersionMapping();
-						obfNames.add(".*", mthdMod.getMethodName());
-						VersionMapping obfDescs = new VersionMapping();
-						obfDescs.add(".*", "()V");
-						add(new ObfuscatedMethod(this, mthdMod.getMethodName(), obfNames,
-								obfDescs));
-					}
+					clssToTweak.add(getClass(((ASMMethodMod) mod).getClassName()));
 				}
 			}
 		}
 	}
 
-	public byte[] handle(String name, String transformedName, byte[] basicClass) {
+	public byte[] transform(String name, String transformedName, byte[] basicClass) {
 		if (basicClass == null)
 			return basicClass;
 
-		ObfuscatedClass clsName = null;
-		for (ObfuscatedClass potentialClsName : classes) {
-			if (potentialClsName.matchesName(name)) {
-				if (!detectedObfuscation) {
-					obfuscated = name.equals(potentialClsName.getObfName());
-					logger.info("detected that obfuscation is {}", obfuscated);
-					detectedObfuscation = true;
-				}
-				clsName = potentialClsName;
-				break;
-			}
-
-		}
-		if (clsName == null)
+		ClsMapping clsMap = mapping.getCls(name);
+		if (!clssToTweak.contains(clsMap))
 			return basicClass;
+
+		if (!detectedObfuscation) {
+			obfuscated = name.equals(clsMap.getSrcName());
+			logger.info("detected that obfuscation is {}", obfuscated);
+			detectedObfuscation = true;
+		}
 
 		ClassNode cls = null;
 		for (ASMTweak tweak : tweaks) {
 			for (ASMMod mod : tweak.getModifications()) {
 				if (mod instanceof ASMClassMod) {
-					cls = handleClassMod(tweak, (ASMClassMod) mod, clsName, cls, basicClass);
+					cls = handleClassMod(tweak, (ASMClassMod) mod, clsMap, cls, basicClass);
 				} else if (mod instanceof ASMMethodMod) {
-					cls = handleMethodMod(tweak, (ASMMethodMod) mod, clsName, cls, basicClass);
+					cls = handleMethodMod(tweak, (ASMMethodMod) mod, clsMap, cls, basicClass);
 				}
 			}
 		}
@@ -153,33 +113,35 @@ public class ASMTweaksManager {
 			return basicClass;
 	}
 
-	private ClassNode handleClassMod(ASMTweak tweak, ASMClassMod mod, ObfuscatedClass clsName,
+	private ClassNode handleClassMod(ASMTweak tweak, ASMClassMod mod, ClsMapping clsName,
 			ClassNode cls, byte[] basicClass) {
-		if (clsName.matchesName(mod.getClassName())) {
+		if (clsName.matches(mod.getClassName())) {
 			if (cls == null)
 				cls = ASMUtils.readClass(basicClass);
 			logger.info("applying class modification from {} to {}({})", tweak.getName(),
-					clsName.getIdentifier(), clsName.getName());
+					clsName.getSrcPath(), clsName.getDstPath());
 			mod.handle(this, cls);
 		}
 		return cls;
 
 	}
 
-	private ClassNode handleMethodMod(ASMTweak tweak, ASMMethodMod mod, ObfuscatedClass clsName,
+	private ClassNode handleMethodMod(ASMTweak tweak, ASMMethodMod mod, ClsMapping clsName,
 			ClassNode cls, byte[] basicClass) {
-		if (clsName.matchesName(mod.getClassName())) {
+		if (clsName.matches(mod.getClassName())) {
 			if (cls == null)
 				cls = ASMUtils.readClass(basicClass);
-			ObfuscatedMethod mthdName = getMethod(mod.getMethodName());
-			MethodNode mthd = ASMUtils.getMethod(cls, mthdName.getIdentifier(), mthdName.getDesc());
+			MthdMapping mthdName = getMethod(mod.getMethodName());
+			MethodNode mthd = ASMUtils.getMethod(cls, mthdName.getSrcName(),
+					mthdName.getDesc().getSrc());
 			if (mthd == null) {
-				logger.error("could not find method {} {} for tweak {}", mthdName.getIdentifier(),
-						mthdName.getDesc(), tweak.getName());
+				logger.error("could not find method {}({}) {}({}) for tweak {}",
+						mthdName.getSrcName(), mthdName.getDstName(), mthdName.getDesc().getSrc(),
+						mthdName.getDesc().getDst(), tweak.getName());
 				throw new RuntimeException("failed patching a class");
 			}
 			logger.info("applying method modification from {} to {}({})", tweak.getName(),
-					mthdName.getIdentifier(), mthdName.getName());
+					mthdName.getSrcName(), mthdName.getDstName());
 			mod.handle(this, mthd);
 		}
 		return cls;

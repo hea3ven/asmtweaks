@@ -9,6 +9,8 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
 
+import com.hea3ven.tools.mappings.ClsMapping;
+
 public class ASMUtils {
 	public static ClassNode readClass(InputStream stream) {
 		ClassReader classReader;
@@ -60,9 +62,9 @@ public class ASMUtils {
 			if (end == -1)
 				throw new RuntimeException("missing ending ; in desc '" + deobfDesc + "'");
 			String className = deobfDesc.substring(i + 1, end);
-			ObfuscatedClass cls = mgr.getClass(className.replace('/', '.'));
+			ClsMapping cls = mgr.getClass(className);
 			obfDesc.append('L');
-			obfDesc.append(cls != null ? cls.getPath() : className);
+			obfDesc.append(cls != null ? cls.getSrcPath() : className);
 			obfDesc.append(';');
 			i = end + 1;
 		}
