@@ -132,8 +132,7 @@ public class ASMTweaksManager implements IClassTransformer {
 			if (cls == null)
 				cls = ASMUtils.readClass(basicClass);
 			MthdMapping mthdName = getMethod(mod.getMethodName());
-			MethodNode mthd = ASMUtils.getMethod(cls, mthdName.getSrcName(),
-					mthdName.getDesc().getSrc());
+			MethodNode mthd = ASMUtils.getMethod(cls, mthdName);
 			if (mthd == null) {
 				logger.error("could not find method {}({}) {}({}) for tweak {}",
 						mthdName.getSrcName(), mthdName.getDstName(), mthdName.getDesc().getSrc(),

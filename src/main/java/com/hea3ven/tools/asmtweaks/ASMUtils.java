@@ -10,6 +10,8 @@ import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
 
 import com.hea3ven.tools.mappings.ClsMapping;
+import com.hea3ven.tools.mappings.Desc;
+import com.hea3ven.tools.mappings.MthdMapping;
 
 public class ASMUtils {
 	public static ClassNode readClass(InputStream stream) {
@@ -39,11 +41,11 @@ public class ASMUtils {
 		return writer.toByteArray();
 	}
 
-	public static MethodNode getMethod(ClassNode classNode, String methodName, String methodDesc) {
+	public static MethodNode getMethod(ClassNode classNode, MthdMapping mthd) {
 		Iterator<MethodNode> methods = classNode.methods.iterator();
 		while (methods.hasNext()) {
 			MethodNode m = methods.next();
-			if ((m.name.equals(methodName) && m.desc.equals(methodDesc)))
+			if (mthd.matches(classNode.name, m.name, m.desc))
 				return m;
 		}
 		return null;
