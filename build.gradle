@@ -12,11 +12,12 @@ apply plugin: 'java'
 apply plugin: 'eclipse'
 apply plugin: 'maven'
 
-version = "1.0.0"
+version = "1.0.2"
 group = "com.hea3ven.tools.asmtweaks"
 archivesBaseName = "h3nt-asmtweaks"
 
-sourceCompatibility = 1.6
+sourceCompatibility = 1.7
+targetCompatibility = 1.7
 
 dependencies {
     compile 'net.minecraft:launchwrapper:1.12'
