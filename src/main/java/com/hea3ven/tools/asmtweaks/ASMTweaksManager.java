@@ -27,8 +27,10 @@ public class ASMTweaksManager implements IClassTransformer {
 
 	private ASMTweaksConfig config;
 
+	private HashSet<String> tweakedClsNames = Sets.newHashSet();
+	private HashSet<String> tweakedClsObfNames = Sets.newHashSet();
+
 	private HashSet<ASMTweak> tweaks = Sets.newHashSet();
-	private HashSet<ClsMapping> clssToTweak = Sets.newHashSet();
 
 	private Mapping mapping;
 
@@ -73,11 +75,10 @@ public class ASMTweaksManager implements IClassTransformer {
 			tweak.configure(config.getTweakConfig(tweak));
 			tweaks.add(tweak);
 			for (ASMMod mod : tweak.getModifications()) {
-				if (mod instanceof ASMClassMod) {
-					clssToTweak.add(getClass(((ASMClassMod) mod).getClassName()));
-				} else if (mod instanceof ASMMethodMod) {
-					clssToTweak.add(getClass(((ASMMethodMod) mod).getClassName()));
-				}
+				ClsMapping cls = getClass(mod.getClassName());
+				String deobfName = cls.getDstPath() != null ? cls.getDstPath() : cls.getSrcPath();
+				tweakedClsNames.add(deobfName.replace('/', '.'));
+				tweakedClsObfNames.add(cls.getSrcPath().replace('/', '.'));
 			}
 		}
 	}
@@ -86,15 +87,19 @@ public class ASMTweaksManager implements IClassTransformer {
 		if (basicClass == null)
 			return basicClass;
 
-		ClsMapping clsMap = mapping.getCls(name);
-		if (!clssToTweak.contains(clsMap))
-			return basicClass;
-
 		if (!detectedObfuscation) {
-			obfuscated = name.equals(clsMap.getSrcName());
+			if (!tweakedClsNames.contains(name) && !tweakedClsObfNames.contains(name))
+				return basicClass;
+			obfuscated = tweakedClsObfNames.contains(name);
 			logger.info("detected that obfuscation is {}", obfuscated);
 			detectedObfuscation = true;
 		}
+
+		if ((obfuscated && !tweakedClsObfNames.contains(name))
+				|| (!obfuscated && !tweakedClsNames.contains(name)))
+			return basicClass;
+
+		ClsMapping clsMap = mapping.getCls(name);
 
 		ClassNode cls = null;
 		for (ASMTweak tweak : tweaks) {

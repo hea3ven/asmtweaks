@@ -1,3 +1,7 @@
-    * fix errors when running in deobfuscated environment.
-v1.0.0:
-    * initial release
+    * Fix the tweak manager creating a class mapping for every loaded class, fixes #1.
+
+1.0.1:
+    * Fix errors when running in deobfuscated environment.
+
+1.0.0:
+    * Initial release
