@@ -6,7 +6,8 @@ import java.util.Iterator;
 import java.util.regex.Pattern;
 
 import com.google.common.base.Throwables;
-
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
@@ -14,16 +15,19 @@ import org.objectweb.asm.tree.MethodNode;
 
 import net.minecraft.launchwrapper.Launch;
 
+import com.hea3ven.tools.mappings.IdentityMapping;
 import com.hea3ven.tools.mappings.Mapping;
 import com.hea3ven.tools.mappings.parser.enigma.EnigmaMappingsParser;
 
 public class ASMTweaksManagerBuilder {
 
+	private static final Logger logger = LogManager.getLogger("asmtweaks.ASMTweaksBuilder");
+
 	private ASMTweaksManager mgr;
 
 	private static String discoverVersion() {
-		InputStream stream = Launch.classLoader
-				.getResourceAsStream("net/minecraft/server/MinecraftServer.class");
+		InputStream stream =
+				Launch.classLoader.getResourceAsStream("net/minecraft/server/MinecraftServer.class");
 		ClassNode serverClass = ASMUtils.readClass(stream);
 		VersionScannerVisitor versionScanner = new VersionScannerVisitor();
 		Iterator<MethodNode> methodIter = serverClass.methods.iterator();
@@ -42,14 +46,20 @@ public class ASMTweaksManagerBuilder {
 
 	public ASMTweaksManagerBuilder loadMappings(String string) {
 		EnigmaMappingsParser parser = new EnigmaMappingsParser();
-		Mapping mapping = null;
-		try {
-			mapping = parser.add(this.getClass().getResourceAsStream(
-					string + "/" + mgr.getCurrentVersion() + ".mappings"));
-		} catch (IOException e) {
-			Throwables.propagate(e);
+		InputStream mappingsStream =
+				this.getClass().getResourceAsStream(string + "/" + mgr.getCurrentVersion() + ".mappings");
+		if (mappingsStream != null) {
+			try {
+				Mapping mapping = parser.add(mappingsStream);
+				mgr.setMapping(mapping);
+			} catch (IOException e) {
+				Throwables.propagate(e);
+			}
+		} else {
+			logger.warn(
+					"No mappings found either you are in the development environment or something went wrong");
+			mgr.setMapping(new IdentityMapping());
 		}
-		mgr.setMapping(mapping);
 		return this;
 	}
 

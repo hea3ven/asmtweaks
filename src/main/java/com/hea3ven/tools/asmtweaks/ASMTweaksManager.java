@@ -62,8 +62,8 @@ public class ASMTweaksManager implements IClassTransformer {
 		return mapping.getCls(className);
 	}
 
-	public MthdMapping getMethod(String methodName) {
-		return mapping.getMthd(methodName);
+	public MthdMapping getMethod(String methodName, String desc) {
+		return mapping.getMthd(methodName, desc);
 	}
 
 	public FldMapping getField(String fieldName) {
@@ -136,7 +136,7 @@ public class ASMTweaksManager implements IClassTransformer {
 		if (clsName.matches(mod.getClassName())) {
 			if (cls == null)
 				cls = ASMUtils.readClass(basicClass);
-			MthdMapping mthdName = getMethod(mod.getMethodName());
+			MthdMapping mthdName = getMethod(mod.getMethodName(), mod.getMethodDesc());
 			MethodNode mthd = ASMUtils.getMethod(cls, mthdName);
 			if (mthd == null) {
 				logger.error("could not find method {}({}) {}({}) for tweak {}",

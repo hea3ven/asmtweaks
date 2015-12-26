@@ -6,6 +6,7 @@ public interface ASMMethodMod extends ASMMod {
 
 	String getMethodName();
 
-	void handle(ASMTweaksManager mgr, MethodNode method);
+	String getMethodDesc();
 
+	void handle(ASMTweaksManager mgr, MethodNode method);
 }

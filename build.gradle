@@ -1,11 +1,12 @@
 repositories {
+    mavenCentral()
+    mavenLocal()
     maven {
         url "https://raw.github.com/hea3ven/mvn-repo/master"
     }
 	maven {
 		url "https://libraries.minecraft.net/"
 	}
-	mavenCentral()
 }
 
 apply plugin: 'java'
@@ -24,7 +25,7 @@ dependencies {
 	compile 'org.ow2.asm:asm-debug-all:5.0.3'
 	compile 'org.apache.logging.log4j:log4j-core:2.0-beta9'
 	compile 'org.apache.logging.log4j:log4j-api:2.0-beta9'
-	compile 'com.google.guava:guava:15.0'
+	compile 'com.google.guava:guava:17.0'
 
     compile 'com.hea3ven.tools.mappings:h3nt-mappings:1.0.1'
 

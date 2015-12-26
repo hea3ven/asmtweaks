@@ -1,3 +1,5 @@
+    * Fix running in deobfuscated environments when no mapping is available.
+
 1.0.2:
     * Fix the tweak manager creating a class mapping for every loaded class, fixes #1.
 
