@@ -1,5 +1,7 @@
 package com.hea3ven.tools.asmtweaks;
 
+import LZMA.LzmaInputStream;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
@@ -18,12 +20,14 @@ import net.minecraft.launchwrapper.Launch;
 import com.hea3ven.tools.mappings.IdentityMapping;
 import com.hea3ven.tools.mappings.Mapping;
 import com.hea3ven.tools.mappings.parser.enigma.EnigmaMappingsParser;
+import com.hea3ven.tools.mappings.parser.srg.SrgMappingsParser;
 
 public class ASMTweaksManagerBuilder {
 
 	private static final Logger logger = LogManager.getLogger("asmtweaks.ASMTweaksBuilder");
 
 	private ASMTweaksManager mgr;
+	private Mapping srgMappings = new Mapping();
 
 	private static String discoverVersion() {
 		InputStream stream =
@@ -56,10 +60,32 @@ public class ASMTweaksManagerBuilder {
 				Throwables.propagate(e);
 			}
 		} else {
-			logger.warn(
-					"No mappings found either you are in the development environment or something went wrong");
-			mgr.setMapping(new IdentityMapping());
+			mappingsStream = this.getClass()
+					.getResourceAsStream("/deobfuscation_data-" + mgr.getCurrentVersion() + ".lzma");
+			if (mappingsStream != null) {
+				SrgMappingsParser srgParser = new SrgMappingsParser();
+				try {
+					Mapping mapping = srgParser.add(new LzmaInputStream(mappingsStream));
+					mgr.setMapping(mapping);
+				} catch (IOException e) {
+					Throwables.propagate(e);
+				}
+			} else {
+				logger.warn(
+						"No mappings found either you are in the development environment or something went wrong");
+				mgr.setMapping(new IdentityMapping());
+			}
 		}
+		return this;
+	}
+
+	public ASMTweaksManagerBuilder addFldSrg(String src, String dst) {
+		srgMappings.addFld(src, dst);
+		return this;
+	}
+
+	public ASMTweaksManagerBuilder addMthdSrg(String src, String dst, String desc) {
+		srgMappings.addMthd(src, dst, desc);
 		return this;
 	}
 
@@ -69,6 +95,8 @@ public class ASMTweaksManagerBuilder {
 	}
 
 	public ASMTweaksManager build() {
+		if (srgMappings.getAll().size() > 0)
+			mgr.setSrgMapping(srgMappings);
 		return mgr;
 	}
 

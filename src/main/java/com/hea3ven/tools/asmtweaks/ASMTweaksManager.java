@@ -11,10 +11,7 @@ import org.objectweb.asm.tree.MethodNode;
 
 import net.minecraft.launchwrapper.IClassTransformer;
 
-import com.hea3ven.tools.mappings.ClsMapping;
-import com.hea3ven.tools.mappings.FldMapping;
-import com.hea3ven.tools.mappings.Mapping;
-import com.hea3ven.tools.mappings.MthdMapping;
+import com.hea3ven.tools.mappings.*;
 
 public class ASMTweaksManager implements IClassTransformer {
 
@@ -33,6 +30,7 @@ public class ASMTweaksManager implements IClassTransformer {
 	private HashSet<ASMTweak> tweaks = Sets.newHashSet();
 
 	private Mapping mapping;
+	private Mapping srgMapping;
 
 	public ASMTweaksManager(String currentVersion) {
 		logger.info("using mappings for version {}", currentVersion);
@@ -58,15 +56,36 @@ public class ASMTweaksManager implements IClassTransformer {
 		this.mapping = mapping;
 	}
 
+	public void setSrgMapping(Mapping mapping) {
+		this.srgMapping = mapping;
+	}
+
 	public ClsMapping getClass(String className) {
+		if (obfuscated && srgMapping != null) {
+			ClsMapping clsMap = srgMapping.getCls(className);
+			if (clsMap != null)
+				className = clsMap.getDstPath();
+		}
 		return mapping.getCls(className);
 	}
 
 	public MthdMapping getMethod(String methodName, String desc) {
+		if (obfuscated && srgMapping != null) {
+			MthdMapping mthdMap = srgMapping.getMthd(methodName, desc);
+			if (mthdMap != null) {
+				methodName = mthdMap.getDstPath();
+				desc = mthdMap.getDesc().getDst();
+			}
+		}
 		return mapping.getMthd(methodName, desc);
 	}
 
 	public FldMapping getField(String fieldName) {
+		if (obfuscated && srgMapping != null) {
+			FldMapping fldMap = srgMapping.getFld(fieldName);
+			if (fldMap != null)
+				fieldName = fldMap.getDstPath();
+		}
 		return mapping.getFld(fieldName);
 	}
 
@@ -76,9 +95,14 @@ public class ASMTweaksManager implements IClassTransformer {
 			tweaks.add(tweak);
 			for (ASMMod mod : tweak.getModifications()) {
 				ClsMapping cls = getClass(mod.getClassName());
-				String deobfName = cls.getDstPath() != null ? cls.getDstPath() : cls.getSrcPath();
-				tweakedClsNames.add(deobfName.replace('/', '.'));
-				tweakedClsObfNames.add(cls.getSrcPath().replace('/', '.'));
+				if (cls != null) {
+					String deobfName = cls.getDstPath() != null ? cls.getDstPath() : cls.getSrcPath();
+					tweakedClsNames.add(deobfName);
+					tweakedClsObfNames.add(cls.getSrcPath());
+				} else {
+					tweakedClsNames.add(mod.getClassName());
+					tweakedClsObfNames.add(mod.getClassName());
+				}
 			}
 		}
 	}
@@ -87,19 +111,23 @@ public class ASMTweaksManager implements IClassTransformer {
 		if (basicClass == null)
 			return basicClass;
 
+		name = name.replace(".", "/");
+
 		if (!detectedObfuscation) {
 			if (!tweakedClsNames.contains(name) && !tweakedClsObfNames.contains(name))
 				return basicClass;
-			obfuscated = tweakedClsObfNames.contains(name);
+			obfuscated = !tweakedClsNames.contains(name);
 			logger.info("detected that obfuscation is {}", obfuscated);
 			detectedObfuscation = true;
 		}
 
-		if ((obfuscated && !tweakedClsObfNames.contains(name))
-				|| (!obfuscated && !tweakedClsNames.contains(name)))
+		if ((obfuscated && !tweakedClsObfNames.contains(name)) ||
+				(!obfuscated && !tweakedClsNames.contains(name)))
 			return basicClass;
 
 		ClsMapping clsMap = mapping.getCls(name);
+		if (clsMap == null)
+			clsMap = new ClsMapping(name, name);
 
 		ClassNode cls = null;
 		for (ASMTweak tweak : tweaks) {
@@ -118,8 +146,8 @@ public class ASMTweaksManager implements IClassTransformer {
 			return basicClass;
 	}
 
-	private ClassNode handleClassMod(ASMTweak tweak, ASMClassMod mod, ClsMapping clsName,
-			ClassNode cls, byte[] basicClass) {
+	private ClassNode handleClassMod(ASMTweak tweak, ASMClassMod mod, ClsMapping clsName, ClassNode cls,
+			byte[] basicClass) {
 		if (clsName.matches(mod.getClassName())) {
 			if (cls == null)
 				cls = ASMUtils.readClass(basicClass);
@@ -128,20 +156,25 @@ public class ASMTweaksManager implements IClassTransformer {
 			mod.handle(this, cls);
 		}
 		return cls;
-
 	}
 
-	private ClassNode handleMethodMod(ASMTweak tweak, ASMMethodMod mod, ClsMapping clsName,
-			ClassNode cls, byte[] basicClass) {
+	private ClassNode handleMethodMod(ASMTweak tweak, ASMMethodMod mod, ClsMapping clsName, ClassNode cls,
+			byte[] basicClass) {
 		if (clsName.matches(mod.getClassName())) {
 			if (cls == null)
 				cls = ASMUtils.readClass(basicClass);
 			MthdMapping mthdName = getMethod(mod.getMethodName(), mod.getMethodDesc());
+			if (mthdName == null) {
+				String methodName = mod.getMethodName();
+				methodName = methodName.substring(methodName.lastIndexOf('/')+1);
+				mthdName = new MthdMapping(clsName, methodName, methodName,
+						Desc.parse(mapping, mod.getMethodDesc()));
+			}
 			MethodNode mthd = ASMUtils.getMethod(cls, mthdName);
 			if (mthd == null) {
-				logger.error("could not find method {}({}) {}({}) for tweak {}",
-						mthdName.getSrcName(), mthdName.getDstName(), mthdName.getDesc().getSrc(),
-						mthdName.getDesc().getDst(), tweak.getName());
+				logger.error("could not find method {}({}) {}({}) for tweak {}", mthdName.getSrcName(),
+						mthdName.getDstName(), mthdName.getDesc().getSrc(), mthdName.getDesc().getDst(),
+						tweak.getName());
 				throw new RuntimeException("failed patching a class");
 			}
 			logger.info("applying method modification from {} to {}({})", tweak.getName(),

@@ -26,7 +26,7 @@ dependencies {
 	compile 'org.apache.logging.log4j:log4j-core:2.0-beta9'
 	compile 'org.apache.logging.log4j:log4j-api:2.0-beta9'
 	compile 'com.google.guava:guava:17.0'
-
+	compile 'lzma:lzma:0.0.1'
     compile 'com.hea3ven.tools.mappings:h3nt-mappings:1.0.1'
 
     testCompile 'junit:junit:4.12'
