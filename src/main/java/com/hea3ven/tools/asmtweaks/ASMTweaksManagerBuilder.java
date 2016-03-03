@@ -17,8 +17,7 @@ import org.objectweb.asm.tree.MethodNode;
 
 import net.minecraft.launchwrapper.Launch;
 
-import com.hea3ven.tools.mappings.IdentityMapping;
-import com.hea3ven.tools.mappings.Mapping;
+import com.hea3ven.tools.mappings.*;
 import com.hea3ven.tools.mappings.parser.enigma.EnigmaMappingsParser;
 import com.hea3ven.tools.mappings.parser.srg.SrgMappingsParser;
 
@@ -55,7 +54,7 @@ public class ASMTweaksManagerBuilder {
 		if (mappingsStream != null) {
 			try {
 				Mapping mapping = parser.add(mappingsStream);
-				mgr.setMapping(mapping);
+				mgr.setMapping(new WrapperMapping(mapping));
 			} catch (IOException e) {
 				Throwables.propagate(e);
 			}
@@ -66,7 +65,7 @@ public class ASMTweaksManagerBuilder {
 				SrgMappingsParser srgParser = new SrgMappingsParser();
 				try {
 					Mapping mapping = srgParser.add(new LzmaInputStream(mappingsStream));
-					mgr.setMapping(mapping);
+					mgr.setMapping(new WrapperMapping(mapping));
 				} catch (IOException e) {
 					Throwables.propagate(e);
 				}
@@ -127,6 +126,41 @@ public class ASMTweaksManagerBuilder {
 			if (version != null && !version.equals(potentialVersion))
 				throw new RuntimeException("could not detect running version, multiple matches");
 			version = potentialVersion;
+		}
+	}
+
+	class WrapperMapping extends Mapping {
+		private final Mapping other;
+
+		public WrapperMapping(Mapping other) {
+			this.other = other;
+		}
+
+		@Override
+		public ClsMapping getCls(String name) {
+			ClsMapping elem = other.getCls(name);
+			if (elem == null) {
+				elem = other.addCls(name, name);
+			}
+			if (elem.getDstPath() == null)
+				elem = other.addCls(elem.getSrcPath(), elem.getSrcPath());
+			return elem;
+		}
+
+		@Override
+		public MthdMapping getMthd(String name, String desc) {
+			MthdMapping elem = other.getMthd(name, desc);
+			if (elem == null)
+				elem = other.addMthd(name, name, desc);
+			return elem;
+		}
+
+		@Override
+		public FldMapping getFld(String name) {
+			FldMapping elem = other.getFld(name);
+			if (elem == null)
+				elem = other.addFld(name, name);
+			return elem;
 		}
 	}
 }

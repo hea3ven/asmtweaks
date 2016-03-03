@@ -3,7 +3,6 @@ package com.hea3ven.tools.asmtweaks;
 import java.util.HashSet;
 
 import com.google.common.collect.Sets;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.objectweb.asm.tree.ClassNode;
@@ -63,7 +62,7 @@ public class ASMTweaksManager implements IClassTransformer {
 	public ClsMapping getClass(String className) {
 		if (obfuscated && srgMapping != null) {
 			ClsMapping clsMap = srgMapping.getCls(className);
-			if (clsMap != null)
+			if (clsMap != null && clsMap.getDstPath() != null)
 				className = clsMap.getDstPath();
 		}
 		return mapping.getCls(className);
@@ -166,7 +165,7 @@ public class ASMTweaksManager implements IClassTransformer {
 			MthdMapping mthdName = getMethod(mod.getMethodName(), mod.getMethodDesc());
 			if (mthdName == null) {
 				String methodName = mod.getMethodName();
-				methodName = methodName.substring(methodName.lastIndexOf('/')+1);
+				methodName = methodName.substring(methodName.lastIndexOf('/') + 1);
 				mthdName = new MthdMapping(clsName, methodName, methodName,
 						Desc.parse(mapping, mod.getMethodDesc()));
 			}
