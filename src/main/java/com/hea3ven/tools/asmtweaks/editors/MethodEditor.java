@@ -11,6 +11,7 @@ import org.objectweb.asm.tree.*;
 import com.hea3ven.tools.asmtweaks.ASMTweaksManager;
 import com.hea3ven.tools.asmtweaks.ASMUtils;
 import com.hea3ven.tools.mappings.ClsMapping;
+import com.hea3ven.tools.mappings.ElementMapping;
 import com.hea3ven.tools.mappings.FldMapping;
 import com.hea3ven.tools.mappings.MthdMapping;
 
@@ -24,7 +25,7 @@ public class MethodEditor {
 
 	private Map<String, ClsMapping> imports = new HashMap<>();
 	private Mode mode;
-	private Boolean obfuscation;
+	private ObfuscationMode obfuscation;
 
 	public MethodEditor(ASMTweaksManager mgr, MethodNode mthdNode) {
 		this.mgr = mgr;
@@ -37,12 +38,12 @@ public class MethodEditor {
 		imports.put(cls.getDstName(), cls);
 	}
 
-	public void setObfuscation(Boolean obfuscation) {
+	public void setObfuscation(ObfuscationMode obfuscation) {
 		this.obfuscation = obfuscation;
 	}
 
 	private boolean getActualObfuscation() {
-		return obfuscation != null ? obfuscation : mgr.isObfuscated();
+		return obfuscation != null ? obfuscation == ObfuscationMode.OBFUSCATED : mgr.isObfuscated();
 	}
 
 	public void Seek(int count) {
@@ -68,10 +69,10 @@ public class MethodEditor {
 	public MethodEditor methodInsn(int opcode, String owner, String name, String desc) {
 		MthdMapping mthd = getMethod(name, desc);
 		ClsMapping cls = getClass(owner);
-		mode.apply(
-				new MethodInsnNode(opcode, cls.getPath(getActualObfuscation()), mthd.getName(
-						getActualObfuscation()),
-						mthd.getDesc().get(getActualObfuscation()), opcode == Opcodes.INVOKEINTERFACE));
+		mode.apply(new MethodInsnNode(opcode,
+				cls.getPath((obfuscation != ObfuscationMode.SRG) ? getActualObfuscation() : true),
+				mthd.getName(getActualObfuscation()), mthd.getDesc().get(getActualObfuscation()),
+				opcode == Opcodes.INVOKEINTERFACE));
 		return this;
 	}
 
@@ -82,7 +83,8 @@ public class MethodEditor {
 
 	public MethodEditor fieldInsn(int opcode, String owner, String name, String desc) {
 		FldMapping fld = getField(name, desc);
-		mode.apply(new FieldInsnNode(opcode, getClass(owner).getPath(getActualObfuscation()),
+		mode.apply(new FieldInsnNode(opcode, getClass(owner).getPath(
+				(obfuscation != ObfuscationMode.SRG) ? getActualObfuscation() : true),
 				fld.getName(getActualObfuscation()), getDesc(desc)));
 		return this;
 	}
@@ -171,6 +173,7 @@ public class MethodEditor {
 			boolean found = false;
 			for (int pos = cursor; pos < mthdNode.instructions.size(); pos++) {
 				AbstractInsnNode posNode = mthdNode.instructions.get(pos);
+//				logger.info("Searching at {}", ASMUtils.nodeToString(posNode));
 				if (ASMUtils.areNodesEqual(node, posNode)) {
 					cursor = pos;
 					found = true;
