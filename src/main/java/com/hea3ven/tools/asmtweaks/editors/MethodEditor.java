@@ -70,7 +70,7 @@ public class MethodEditor {
 		MthdMapping mthd = getMethod(name, desc);
 		ClsMapping cls = getClass(owner);
 		mode.apply(new MethodInsnNode(opcode,
-				cls.getPath((obfuscation != ObfuscationMode.SRG) ? getActualObfuscation() : true),
+				cls.getPath((obfuscation != ObfuscationMode.SRG) ? getActualObfuscation() : false),
 				mthd.getName(getActualObfuscation()), mthd.getDesc().get(getActualObfuscation()),
 				opcode == Opcodes.INVOKEINTERFACE));
 		return this;
@@ -84,7 +84,7 @@ public class MethodEditor {
 	public MethodEditor fieldInsn(int opcode, String owner, String name, String desc) {
 		FldMapping fld = getField(name, desc);
 		mode.apply(new FieldInsnNode(opcode, getClass(owner).getPath(
-				(obfuscation != ObfuscationMode.SRG) ? getActualObfuscation() : true),
+				(obfuscation != ObfuscationMode.SRG) ? getActualObfuscation() : false),
 				fld.getName(getActualObfuscation()), getDesc(desc)));
 		return this;
 	}
@@ -191,6 +191,7 @@ public class MethodEditor {
 
 		@Override
 		public void apply(AbstractInsnNode node) {
+//			logger.info("Removing node {}", ASMUtils.nodeToString(node));
 			AbstractInsnNode cursorNode = mthdNode.instructions.get(cursor);
 			if (!ASMUtils.areNodesEqual(node, cursorNode)) {
 				logger.error("Expected node does not match ({}, {})", ASMUtils.nodeToString(node),
@@ -204,6 +205,7 @@ public class MethodEditor {
 	private class InsertMode implements Mode {
 		@Override
 		public void apply(AbstractInsnNode node) {
+//			logger.info("Inserting node {}", ASMUtils.nodeToString(node));
 			if (mthdNode.instructions.size() > 0)
 				mthdNode.instructions.insert(mthdNode.instructions.get(cursor++), node);
 			else
