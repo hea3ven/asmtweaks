@@ -2,7 +2,6 @@ package com.hea3ven.tools.asmtweaks;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Iterator;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
@@ -40,9 +39,7 @@ public class ASMUtils {
 	}
 
 	public static MethodNode getMethod(ClassNode classNode, MthdMapping mthd) {
-		Iterator<MethodNode> methods = classNode.methods.iterator();
-		while (methods.hasNext()) {
-			MethodNode m = methods.next();
+		for (MethodNode m : classNode.methods) {
 			if (mthd.matches(classNode.name, m.name, m.desc))
 				return m;
 		}

@@ -4,7 +4,6 @@ import LZMA.LzmaInputStream;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Iterator;
 import java.util.regex.Pattern;
 
 import com.google.common.base.Throwables;
@@ -33,11 +32,8 @@ public class ASMTweaksManagerBuilder {
 				Launch.classLoader.getResourceAsStream("net/minecraft/server/MinecraftServer.class");
 		ClassNode serverClass = ASMUtils.readClass(stream);
 		VersionScannerVisitor versionScanner = new VersionScannerVisitor();
-		Iterator<MethodNode> methodIt = serverClass.methods.iterator();
-		while (methodIt.hasNext()) {
-			MethodNode method = methodIt.next();
+		for (MethodNode method : serverClass.methods)
 			method.accept(versionScanner);
-		}
 		if (versionScanner.version == null)
 			throw new RuntimeException("could not detect the running version");
 		return versionScanner.version;
