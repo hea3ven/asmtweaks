@@ -59,7 +59,7 @@ public class ASMUtils {
 			if (end == -1)
 				throw new RuntimeException("missing ending ; in desc '" + deobfDesc + "'");
 			String className = deobfDesc.substring(i + 1, end);
-			ClsMapping cls = mgr.getClass(className);
+			ClsMapping cls = mgr.getMapping().getCls(className);
 			obfDesc.append('L');
 			obfDesc.append(cls != null ? cls.getSrcPath() : className);
 			obfDesc.append(';');

@@ -1,3 +1,5 @@
+	* Rework the API so that multiple mods can share the same ASMTweakManager.
+
 1.1.0:
 	* Fix running in deobfuscated environments when no mapping is available.
 	* Add the ability to use forge deobfuscation data if found.

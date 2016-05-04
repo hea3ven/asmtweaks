@@ -33,7 +33,7 @@ public class MethodEditor {
 	}
 
 	public void addImport(String clsName) {
-		ClsMapping cls = mgr.getClass(clsName);
+		ClsMapping cls = mgr.getMapping().getCls(clsName);
 		imports.put(cls.getDstName(), cls);
 	}
 
@@ -42,7 +42,8 @@ public class MethodEditor {
 	}
 
 	private boolean getActualObfuscation() {
-		return obfuscation != null ? obfuscation == ObfuscationMode.OBFUSCATED : mgr.isObfuscated();
+		return obfuscation != null ? obfuscation == ObfuscationMode.OBFUSCATED :
+				mgr.getObfuscationMode() != ObfuscationMode.DEOBFUSCATED;
 	}
 
 	public void Seek(int count) {
@@ -114,7 +115,7 @@ public class MethodEditor {
 	private ClsMapping getClass(String owner) {
 		if (imports.containsKey(owner))
 			return imports.get(owner);
-		return mgr.getClass(owner);
+		return mgr.getMapping().getCls(owner);
 	}
 
 	private MthdMapping getMethod(String name, String desc) {
@@ -123,7 +124,7 @@ public class MethodEditor {
 		if (imports.containsKey(clsName)) {
 			name = imports.get(clsName).getDstPath() + "/" + name.substring(nameDiv + 1);
 		}
-		return mgr.getMethod(name, getExpandDesc(desc));
+		return mgr.getMapping().getMthd(name, getExpandDesc(desc));
 	}
 
 	private FldMapping getField(String name, String desc) {
@@ -132,7 +133,7 @@ public class MethodEditor {
 		if (imports.containsKey(clsName)) {
 			name = imports.get(clsName).getDstPath() + "/" + name.substring(nameDiv + 1);
 		}
-		return mgr.getField(name);
+		return mgr.getMapping().getFld(name);
 	}
 
 	private String getExpandDesc(String desc) {
