@@ -20,7 +20,7 @@ public class ASMTweaksConfig {
 		}
 
 		public String getString(String name, String defaultValue) {
-			return getTweakConfigValue(tweak, name, defaultValue.toString());
+			return getTweakConfigValue(tweak, name, defaultValue);
 		}
 
 		public Integer getInt(String name, Integer defaultValue) {
@@ -61,11 +61,12 @@ public class ASMTweaksConfig {
 	public void save() {
 		File parent = new File(configPath.getParent());
 		if (!parent.exists())
-			parent.mkdirs();
+			if (!parent.mkdirs())
+				throw new RuntimeException("Could not create configuration directory");
 		try {
 			props.store(new FileOutputStream(configPath, false), "");
 		} catch (Exception e) {
-			e.printStackTrace();
+			throw new RuntimeException("Could not save configuration", e);
 		}
 	}
 
@@ -88,7 +89,7 @@ public class ASMTweaksConfig {
 
 	private String getTweakConfigValue(ASMTweak tweak, String configName, String defaultValue) {
 		if (!props.containsKey(getTweakConfig(tweak, configName))) {
-			props.setProperty(getTweakConfig(tweak, configName), defaultValue.toString());
+			props.setProperty(getTweakConfig(tweak, configName), defaultValue);
 			save();
 		}
 		return props.getProperty(getTweakConfig(tweak, configName));

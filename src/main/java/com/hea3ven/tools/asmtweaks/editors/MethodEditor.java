@@ -11,7 +11,6 @@ import org.objectweb.asm.tree.*;
 import com.hea3ven.tools.asmtweaks.ASMTweaksManager;
 import com.hea3ven.tools.asmtweaks.ASMUtils;
 import com.hea3ven.tools.mappings.ClsMapping;
-import com.hea3ven.tools.mappings.ElementMapping;
 import com.hea3ven.tools.mappings.FldMapping;
 import com.hea3ven.tools.mappings.MthdMapping;
 
@@ -51,7 +50,13 @@ public class MethodEditor {
 	}
 
 	public <T extends AbstractInsnNode> T Get() {
-		return (T) mthdNode.instructions.get(cursor);
+		AbstractInsnNode node = mthdNode.instructions.get(cursor);
+		try {
+			//noinspection unchecked
+			return (T) node;
+		} catch (ClassCastException e) {
+			throw new MethodEditorException("Wrong type of node", e);
+		}
 	}
 
 	public void setSearchMode() {
@@ -70,7 +75,7 @@ public class MethodEditor {
 		MthdMapping mthd = getMethod(name, desc);
 		ClsMapping cls = getClass(owner);
 		mode.apply(new MethodInsnNode(opcode,
-				cls.getPath((obfuscation != ObfuscationMode.SRG) ? getActualObfuscation() : false),
+				cls.getPath((obfuscation != ObfuscationMode.SRG) && getActualObfuscation()),
 				mthd.getName(getActualObfuscation()), mthd.getDesc().get(getActualObfuscation()),
 				opcode == Opcodes.INVOKEINTERFACE));
 		return this;
@@ -83,8 +88,8 @@ public class MethodEditor {
 
 	public MethodEditor fieldInsn(int opcode, String owner, String name, String desc) {
 		FldMapping fld = getField(name, desc);
-		mode.apply(new FieldInsnNode(opcode, getClass(owner).getPath(
-				(obfuscation != ObfuscationMode.SRG) ? getActualObfuscation() : false),
+		mode.apply(new FieldInsnNode(opcode,
+				getClass(owner).getPath((obfuscation != ObfuscationMode.SRG) && getActualObfuscation()),
 				fld.getName(getActualObfuscation()), getDesc(desc)));
 		return this;
 	}

@@ -33,9 +33,9 @@ public class ASMTweaksManagerBuilder {
 				Launch.classLoader.getResourceAsStream("net/minecraft/server/MinecraftServer.class");
 		ClassNode serverClass = ASMUtils.readClass(stream);
 		VersionScannerVisitor versionScanner = new VersionScannerVisitor();
-		Iterator<MethodNode> methodIter = serverClass.methods.iterator();
-		while (methodIter.hasNext()) {
-			MethodNode method = methodIter.next();
+		Iterator<MethodNode> methodIt = serverClass.methods.iterator();
+		while (methodIt.hasNext()) {
+			MethodNode method = methodIt.next();
 			method.accept(versionScanner);
 		}
 		if (versionScanner.version == null)
