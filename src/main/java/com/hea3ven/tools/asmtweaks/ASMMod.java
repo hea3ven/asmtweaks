@@ -4,4 +4,7 @@ public interface ASMMod {
 
 	String getClassName();
 
+	default boolean isClientSideOnly() {
+		return false;
+	}
 }

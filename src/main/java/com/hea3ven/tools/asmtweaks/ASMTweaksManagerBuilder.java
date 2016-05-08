@@ -28,19 +28,31 @@ public class ASMTweaksManagerBuilder {
 	private Mapping srgMappings = new Mapping();
 
 	private static String discoverVersion() {
-		InputStream stream =
-				Launch.classLoader.getResourceAsStream("net/minecraft/server/MinecraftServer.class");
-		ClassNode serverClass = ASMUtils.readClass(stream);
-		VersionScannerVisitor versionScanner = new VersionScannerVisitor();
-		for (MethodNode method : serverClass.methods)
-			method.accept(versionScanner);
-		if (versionScanner.version == null)
-			throw new RuntimeException("could not detect the running version");
-		return versionScanner.version;
+		try(InputStream stream =
+				Launch.classLoader.getResourceAsStream("net/minecraft/server/MinecraftServer.class")) {
+			ClassNode serverClass = ASMUtils.readClass(stream);
+			VersionScannerVisitor versionScanner = new VersionScannerVisitor();
+			for (MethodNode method : serverClass.methods)
+				method.accept(versionScanner);
+			if (versionScanner.version == null)
+				throw new RuntimeException("could not detect the running version");
+			return versionScanner.version;
+		}catch (IOException e){
+			throw new RuntimeException("could not detect the running version", e);
+		}
+	}
+
+	private boolean discoverIsClient() {
+		try(InputStream stream =
+				Launch.classLoader.getResourceAsStream("net/minecraft/client/ClientBrandRetriever.class")) {
+			return stream != null;
+		}catch (IOException e){
+			return false;
+		}
 	}
 
 	public ASMTweaksManagerBuilder() {
-		this.mgr = new ASMTweaksManager(discoverVersion());
+		this.mgr = new ASMTweaksManager(discoverVersion(), discoverIsClient());
 	}
 
 	public ASMTweaksManagerBuilder loadMappings(String string) {

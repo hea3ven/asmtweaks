@@ -16,7 +16,8 @@ public class ASMTweaksManager implements IClassTransformer {
 
 	private static Logger logger = LogManager.getLogger("asmtweaks.ASMTweaksManager");
 
-	private String currentVersion;
+	private final String currentVersion;
+	private final boolean isClient;
 
 	private boolean detectedObfuscation = false;
 	private boolean obfuscated = false;
@@ -31,9 +32,10 @@ public class ASMTweaksManager implements IClassTransformer {
 	private Mapping mapping;
 	private Mapping srgMapping;
 
-	public ASMTweaksManager(String currentVersion) {
+	public ASMTweaksManager(String currentVersion, boolean isClient) {
 		logger.info("using mappings for version {}", currentVersion);
 		this.currentVersion = currentVersion;
+		this.isClient = isClient;
 		config = new ASMTweaksConfig();
 	}
 
@@ -93,14 +95,16 @@ public class ASMTweaksManager implements IClassTransformer {
 			tweak.configure(config.getTweakConfig(tweak));
 			tweaks.add(tweak);
 			for (ASMMod mod : tweak.getModifications()) {
-				ClsMapping cls = getClass(mod.getClassName());
-				if (cls != null) {
-					String deobfName = cls.getDstPath() != null ? cls.getDstPath() : cls.getSrcPath();
-					tweakedClsNames.add(deobfName);
-					tweakedClsObfNames.add(cls.getSrcPath());
-				} else {
-					tweakedClsNames.add(mod.getClassName());
-					tweakedClsObfNames.add(mod.getClassName());
+				if (isClient || !mod.isClientSideOnly()) {
+					ClsMapping cls = getClass(mod.getClassName());
+					if (cls != null) {
+						String deobfName = cls.getDstPath() != null ? cls.getDstPath() : cls.getSrcPath();
+						tweakedClsNames.add(deobfName);
+						tweakedClsObfNames.add(cls.getSrcPath());
+					} else {
+						tweakedClsNames.add(mod.getClassName());
+						tweakedClsObfNames.add(mod.getClassName());
+					}
 				}
 			}
 		}
@@ -131,10 +135,12 @@ public class ASMTweaksManager implements IClassTransformer {
 		ClassNode cls = null;
 		for (ASMTweak tweak : tweaks) {
 			for (ASMMod mod : tweak.getModifications()) {
-				if (mod instanceof ASMClassMod) {
-					cls = handleClassMod(tweak, (ASMClassMod) mod, clsMap, cls, basicClass);
-				} else if (mod instanceof ASMMethodMod) {
-					cls = handleMethodMod(tweak, (ASMMethodMod) mod, clsMap, cls, basicClass);
+				if (isClient || !mod.isClientSideOnly()) {
+					if (mod instanceof ASMClassMod) {
+						cls = handleClassMod(tweak, (ASMClassMod) mod, clsMap, cls, basicClass);
+					} else if (mod instanceof ASMMethodMod) {
+						cls = handleMethodMod(tweak, (ASMMethodMod) mod, clsMap, cls, basicClass);
+					}
 				}
 			}
 		}
