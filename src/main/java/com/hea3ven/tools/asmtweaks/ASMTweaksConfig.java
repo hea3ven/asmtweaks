@@ -62,7 +62,7 @@ public class ASMTweaksConfig {
 		File parent = new File(configPath.getParent());
 		if (!parent.exists())
 			if (!parent.mkdirs())
-				throw new RuntimeException("Could not create configuration directory");
+				throw new RuntimeException("Could not get configuration directory");
 		try {
 			props.store(new FileOutputStream(configPath, false), "");
 		} catch (Exception e) {

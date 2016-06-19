@@ -36,14 +36,16 @@ public class ASMTweaksRunner implements IClassTransformer {
 			tweak.configure(mgr.getConfig().getTweakConfig(tweak));
 			tweaks.add(tweak);
 			for (ASMMod mod : tweak.getModifications()) {
-				ClsMapping cls = mgr.getMapping().getCls(mod.getClassName());
-				if (cls != null) {
-					String deobfName = cls.getDstPath() != null ? cls.getDstPath() : cls.getSrcPath();
-					tweakedClsNames.add(deobfName);
-					tweakedClsObfNames.add(cls.getSrcPath());
-				} else {
-					tweakedClsNames.add(mod.getClassName());
-					tweakedClsObfNames.add(mod.getClassName());
+				if (mgr.isClient() || !mod.isClientSideOnly()) {
+					ClsMapping cls = mgr.getMapping().getCls(mod.getClassName());
+					if (cls != null) {
+						String deobfName = cls.getDstPath() != null ? cls.getDstPath() : cls.getSrcPath();
+						tweakedClsNames.add(deobfName);
+						tweakedClsObfNames.add(cls.getSrcPath());
+					} else {
+						tweakedClsNames.add(mod.getClassName());
+						tweakedClsObfNames.add(mod.getClassName());
+					}
 				}
 			}
 		}
@@ -70,10 +72,12 @@ public class ASMTweaksRunner implements IClassTransformer {
 		ClassNode cls = null;
 		for (ASMTweak tweak : tweaks) {
 			for (ASMMod mod : tweak.getModifications()) {
-				if (mod instanceof ASMClassMod) {
-					cls = handleClassMod(tweak, (ASMClassMod) mod, clsMap, cls, basicClass);
-				} else if (mod instanceof ASMMethodMod) {
-					cls = handleMethodMod(tweak, (ASMMethodMod) mod, clsMap, cls, basicClass);
+				if (mgr.isClient() || !mod.isClientSideOnly()) {
+					if (mod instanceof ASMClassMod) {
+						cls = handleClassMod(tweak, (ASMClassMod) mod, clsMap, cls, basicClass);
+					} else if (mod instanceof ASMMethodMod) {
+						cls = handleMethodMod(tweak, (ASMMethodMod) mod, clsMap, cls, basicClass);
+					}
 				}
 			}
 		}

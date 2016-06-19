@@ -13,14 +13,18 @@ public class ASMTweaksManager {
 	private final String currentVersion;
 	private final ObfuscationMode obfuscationMode;
 
+	private final boolean isClient;
+
 	private ASMTweaksConfig config;
 
 	private Mapping mapping;
+	private boolean client;
 
-	public ASMTweaksManager(String currentVersion, ObfuscationMode obfuscationMode) {
+	public ASMTweaksManager(String currentVersion, ObfuscationMode obfuscationMode, boolean isClient) {
 		logger.info("using mappings for version {}", currentVersion);
 		this.currentVersion = currentVersion;
 		this.obfuscationMode = obfuscationMode;
+		this.isClient = isClient;
 		config = new ASMTweaksConfig();
 	}
 
@@ -38,6 +42,10 @@ public class ASMTweaksManager {
 
 	public void setMapping(Mapping mapping) {
 		this.mapping = mapping;
+	}
+
+	public boolean isClient() {
+		return client;
 	}
 
 	public Mapping getMapping() {

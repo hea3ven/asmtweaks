@@ -28,7 +28,8 @@ public class ASMTweaksBuilder {
 
 	private static final Logger logger = LogManager.getLogger("asmtweaks.ASMTweaksBuilder");
 
-	private static ASMTweaksManager mgr = new ASMTweaksManager(discoverVersion(), discoverObfuscation());
+	private static ASMTweaksManager mgr =
+			new ASMTweaksManager(discoverVersion(), discoverObfuscation(), discoverIsClient());
 
 	private static final ForgeMapping forgeMapping;
 
@@ -61,6 +62,15 @@ public class ASMTweaksBuilder {
 		} else {
 			logger.debug("Detected a deobfuscated environment");
 			return ObfuscationMode.DEOBFUSCATED;
+		}
+	}
+
+	private static boolean discoverIsClient() {
+		try (InputStream stream =
+				Launch.classLoader.getResourceAsStream("net/minecraft/client/ClientBrandRetriever.class")) {
+			return stream != null;
+		} catch (IOException e) {
+			return false;
 		}
 	}
 
