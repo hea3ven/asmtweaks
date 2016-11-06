@@ -4,10 +4,10 @@ import LZMA.LzmaInputStream;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Iterator;
 import java.util.regex.Pattern;
 
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.objectweb.asm.MethodVisitor;
@@ -17,9 +17,9 @@ import org.objectweb.asm.tree.MethodNode;
 
 import net.minecraft.launchwrapper.Launch;
 
-import com.hea3ven.tools.asmtweaks.editors.ObfuscationMode;
-import com.hea3ven.tools.asmtweaks.mapping.ForgeMapping;
-import com.hea3ven.tools.mappings.*;
+import com.hea3ven.tools.mappings.IdentityMapping;
+import com.hea3ven.tools.mappings.Mapping;
+import com.hea3ven.tools.mappings.ObfLevel;
 import com.hea3ven.tools.mappings.parser.IMappingsParser;
 import com.hea3ven.tools.mappings.parser.enigma.EnigmaMappingsParser;
 import com.hea3ven.tools.mappings.parser.srg.SrgMappingsParser;
@@ -31,8 +31,6 @@ public class ASMTweaksBuilder {
 	private static ASMTweaksManager mgr =
 			new ASMTweaksManager(discoverVersion(), discoverObfuscation(), discoverIsClient());
 
-	private static final ForgeMapping forgeMapping;
-
 	private static final Mapping mapping;
 
 	private static String discoverVersion() {
@@ -40,28 +38,25 @@ public class ASMTweaksBuilder {
 				Launch.classLoader.getResourceAsStream("net/minecraft/server/MinecraftServer.class");
 		ClassNode serverClass = ASMUtils.readClass(stream);
 		VersionScannerVisitor versionScanner = new VersionScannerVisitor();
-		Iterator<MethodNode> methodIter = serverClass.methods.iterator();
-		while (methodIter.hasNext()) {
-			MethodNode method = methodIter.next();
+		for (MethodNode method : serverClass.methods)
 			method.accept(versionScanner);
-		}
 		if (versionScanner.version == null)
 			throw new RuntimeException("could not detect the running version");
 		return versionScanner.version;
 	}
 
-	private static ObfuscationMode discoverObfuscation() {
+	private static ObfLevel discoverObfuscation() {
 		if (Launch.classLoader.getResourceAsStream("a.class") != null) {
 			if (Launch.classLoader.getResourceAsStream("forge_logo.png") != null) {
 				logger.debug("Detected a forge obfuscated environment");
-				return ObfuscationMode.SRG;
+				return ForgeObfLevel.SRG;
 			} else {
 				logger.debug("Detected an obfuscated environment");
-				return ObfuscationMode.OBFUSCATED;
+				return ObfLevel.OBF;
 			}
 		} else {
 			logger.debug("Detected a deobfuscated environment");
-			return ObfuscationMode.DEOBFUSCATED;
+			return ObfLevel.DEOBF;
 		}
 	}
 
@@ -78,19 +73,17 @@ public class ASMTweaksBuilder {
 		InputStream mappingsStream = ASMTweaksBuilder.class.getResourceAsStream(
 				"/deobfuscation_data-" + mgr.getCurrentVersion() + ".lzma");
 		if (mappingsStream != null) {
-			forgeMapping = new ForgeMapping();
-			mapping = forgeMapping;
-			SrgMappingsParser srgParser = new SrgMappingsParser(forgeMapping);
+			mapping = new IdentityMapping();
+			SrgMappingsParser srgParser = new SrgMappingsParser(mapping, ObfLevel.OBF, ForgeObfLevel.SRG);
 			try {
 				srgParser.parse(new LzmaInputStream(mappingsStream));
 			} catch (IOException e) {
 				Throwables.propagate(e);
 			}
-			mgr.setMapping(forgeMapping);
+			mgr.setMapping(mapping);
 		} else {
 			logger.warn(
 					"No mapping found either you are in the development environment or something went wrong");
-			forgeMapping = null;
 			mapping = new IdentityMapping();
 			mgr.setMapping(mapping);
 		}
@@ -126,14 +119,12 @@ public class ASMTweaksBuilder {
 	}
 
 	public ASMTweaksBuilder addFldSrg(String src, String dst) {
-		if (forgeMapping != null)
-			forgeMapping.getSrgMapping().addFld(src, dst);
+		mapping.addFld(ImmutableMap.of(ForgeObfLevel.SRG, src, ObfLevel.DEOBF, dst), ObfLevel.DEOBF, "I");
 		return this;
 	}
 
 	public ASMTweaksBuilder addMthdSrg(String src, String dst, String desc) {
-		if (forgeMapping != null)
-			forgeMapping.getSrgMapping().addMthd(src, dst, desc);
+		mapping.addMthd(ImmutableMap.of(ForgeObfLevel.SRG, src, ObfLevel.DEOBF, dst), ObfLevel.DEOBF, desc);
 		return this;
 	}
 

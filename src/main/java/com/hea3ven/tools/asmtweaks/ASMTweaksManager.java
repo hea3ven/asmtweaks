@@ -3,28 +3,26 @@ package com.hea3ven.tools.asmtweaks;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.hea3ven.tools.asmtweaks.editors.ObfuscationMode;
 import com.hea3ven.tools.mappings.Mapping;
+import com.hea3ven.tools.mappings.ObfLevel;
 
 public class ASMTweaksManager {
 
 	private static Logger logger = LogManager.getLogger("asmtweaks.ASMTweaksManager");
 
 	private final String currentVersion;
-	private final ObfuscationMode obfuscationMode;
-
-	private final boolean isClient;
+	private final ObfLevel obfuscationMode;
 
 	private ASMTweaksConfig config;
 
 	private Mapping mapping;
-	private boolean client;
+	private final boolean client;
 
-	public ASMTweaksManager(String currentVersion, ObfuscationMode obfuscationMode, boolean isClient) {
+	public ASMTweaksManager(String currentVersion, ObfLevel obfuscationMode, boolean client) {
 		logger.info("using mappings for version {}", currentVersion);
 		this.currentVersion = currentVersion;
 		this.obfuscationMode = obfuscationMode;
-		this.isClient = isClient;
+		this.client = client;
 		config = new ASMTweaksConfig();
 	}
 
@@ -32,7 +30,7 @@ public class ASMTweaksManager {
 		return currentVersion;
 	}
 
-	public ObfuscationMode getObfuscationMode() {
+	public ObfLevel getObfuscationMode() {
 		return obfuscationMode;
 	}
 

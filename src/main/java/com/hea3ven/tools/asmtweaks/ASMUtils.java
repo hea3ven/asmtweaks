@@ -9,6 +9,7 @@ import org.objectweb.asm.tree.*;
 
 import com.hea3ven.tools.mappings.ClsMapping;
 import com.hea3ven.tools.mappings.MthdMapping;
+import com.hea3ven.tools.mappings.ObfLevel;
 
 public class ASMUtils {
 	public static ClassNode readClass(InputStream stream) {
@@ -40,7 +41,7 @@ public class ASMUtils {
 
 	public static MethodNode getMethod(ClassNode classNode, MthdMapping mthd) {
 		for (MethodNode m : classNode.methods) {
-			if (mthd.matches(classNode.name, m.name, m.desc))
+			if (mthd.matches(ObfLevel.OBF, classNode.name, m.name, m.desc))
 				return m;
 		}
 		return null;
@@ -59,9 +60,9 @@ public class ASMUtils {
 			if (end == -1)
 				throw new RuntimeException("missing ending ; in desc '" + deobfDesc + "'");
 			String className = deobfDesc.substring(i + 1, end);
-			ClsMapping cls = mgr.getMapping().getCls(className);
+			ClsMapping cls = mgr.getMapping().getCls(className, ObfLevel.OBF);
 			obfDesc.append('L');
-			obfDesc.append(cls != null ? cls.getSrcPath() : className);
+			obfDesc.append(cls != null ? cls.getPath(ObfLevel.OBF) : className);
 			obfDesc.append(';');
 			i = end + 1;
 		}
@@ -103,7 +104,7 @@ public class ASMUtils {
 		if (node1 instanceof LabelNode) {
 			LabelNode labelNode1 = (LabelNode) node1;
 			LabelNode labelNode2 = (LabelNode) node2;
-			return labelNode1.equals(labelNode2);
+			return labelNode1.getLabel().equals(labelNode2.getLabel());
 		}
 		if (node1 instanceof InsnNode) {
 			return true;

@@ -1,18 +1,20 @@
 package com.hea3ven.tools.asmtweaks.editors;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.tree.*;
+import org.objectweb.asm.Label;
+import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.LabelNode;
+import org.objectweb.asm.tree.MethodNode;
 
 import com.hea3ven.tools.asmtweaks.ASMTweaksManager;
 import com.hea3ven.tools.asmtweaks.ASMUtils;
 import com.hea3ven.tools.mappings.ClsMapping;
-import com.hea3ven.tools.mappings.FldMapping;
-import com.hea3ven.tools.mappings.MthdMapping;
+import com.hea3ven.tools.mappings.ObfLevel;
 
 public class MethodEditor {
 	private static final Logger logger = LogManager.getLogger("asmtweaks.MethodEditor");
@@ -24,198 +26,170 @@ public class MethodEditor {
 
 	private Map<String, ClsMapping> imports = new HashMap<>();
 	private Mode mode;
-	private ObfuscationMode obfuscation;
+	private ObfLevel level;
 
 	public MethodEditor(ASMTweaksManager mgr, MethodNode mthdNode) {
 		this.mgr = mgr;
 		this.mthdNode = mthdNode;
-		obfuscation = null;
+		level = null;
 	}
 
-	public void addImport(String clsName) {
-		ClsMapping cls = mgr.getMapping().getCls(clsName);
-		imports.put(cls.getDstName(), cls);
-	}
-
-	public void setObfuscation(ObfuscationMode obfuscation) {
-		this.obfuscation = obfuscation;
-	}
-
-	private boolean getActualObfuscation() {
-		return obfuscation != null ? obfuscation == ObfuscationMode.OBFUSCATED :
-				mgr.getObfuscationMode() != ObfuscationMode.DEOBFUSCATED;
+	public void setLevel(ObfLevel level) {
+		this.level = level;
 	}
 
 	public void Seek(int count) {
 		cursor += count;
 	}
 
-	public <T extends AbstractInsnNode> T Get() {
+	public Label GetLabel() {
 		AbstractInsnNode node = mthdNode.instructions.get(cursor);
-		try {
-			//noinspection unchecked
-			return (T) node;
-		} catch (ClassCastException e) {
-			throw new MethodEditorException("Wrong type of node", e);
-		}
+		if (!(node instanceof LabelNode))
+			return null;
+		return ((LabelNode) node).getLabel();
 	}
 
 	public void setSearchMode() {
 		mode = new SearchMode();
 	}
 
+	public void setSearchExactMode() {
+		mode = new SearchExactMode();
+	}
+
 	public void setRemoveMode() {
 		mode = new RemoveMode();
+	}
+
+	public void setRemoveExactMode() {
+		mode = new RemoveExactMode();
 	}
 
 	public void setInsertMode() {
 		mode = new InsertMode();
 	}
 
-	public MethodEditor methodInsn(int opcode, String owner, String name, String desc) {
-		MthdMapping mthd = getMethod(name, desc);
-		ClsMapping cls = getClass(owner);
-		mode.apply(new MethodInsnNode(opcode,
-				cls.getPath((obfuscation != ObfuscationMode.SRG) && getActualObfuscation()),
-				mthd.getName(getActualObfuscation()), mthd.getDesc().get(getActualObfuscation()),
-				opcode == Opcodes.INVOKEINTERFACE));
-		return this;
+	public InstructionBuilder newInstructionBuilder(ASMContext template) {
+		return new InstructionBuilder(new ASMContext(template, mgr.getMapping(),
+				mgr.getObfuscationMode()));
 	}
 
-	public MethodEditor varInsn(int opcode, int var) {
-		mode.apply(new VarInsnNode(opcode, var));
-		return this;
+	public InstructionBuilder newInstructionBuilder() {
+		return new InstructionBuilder(
+				new ASMContext(mgr.getMapping(), mgr.getObfuscationMode()));
 	}
 
-	public MethodEditor fieldInsn(int opcode, String owner, String name, String desc) {
-		FldMapping fld = getField(name, desc);
-		mode.apply(new FieldInsnNode(opcode,
-				getClass(owner).getPath((obfuscation != ObfuscationMode.SRG) && getActualObfuscation()),
-				fld.getName(getActualObfuscation()), getDesc(desc)));
-		return this;
-	}
-
-	public MethodEditor jumpInsn(int opcode, LabelNode label) {
-		mode.apply(new JumpInsnNode(opcode, label));
-		return this;
-	}
-
-	public void typeInsn(int opcode, String desc) {
-		mode.apply(new TypeInsnNode(opcode, getClass(desc).getPath(getActualObfuscation())));
-	}
-
-	public void labelInsn(LabelNode node) {
-		mode.apply(node);
-	}
-
-	public void insn(int opcode) {
-		mode.apply(new InsnNode(opcode));
-	}
-
-	private ClsMapping getClass(String owner) {
-		if (imports.containsKey(owner))
-			return imports.get(owner);
-		return mgr.getMapping().getCls(owner);
-	}
-
-	private MthdMapping getMethod(String name, String desc) {
-		int nameDiv = name.lastIndexOf('/');
-		String clsName = name.substring(0, nameDiv);
-		if (imports.containsKey(clsName)) {
-			name = imports.get(clsName).getDstPath() + "/" + name.substring(nameDiv + 1);
-		}
-		return mgr.getMapping().getMthd(name, getExpandDesc(desc));
-	}
-
-	private FldMapping getField(String name, String desc) {
-		int nameDiv = name.lastIndexOf('/');
-		String clsName = name.substring(0, nameDiv);
-		if (imports.containsKey(clsName)) {
-			name = imports.get(clsName).getDstPath() + "/" + name.substring(nameDiv + 1);
-		}
-		return mgr.getMapping().getFld(name);
-	}
-
-	private String getExpandDesc(String desc) {
-		int start = desc.indexOf('L');
-		while (start != -1) {
-			int end = desc.indexOf(';', start);
-			String clsName = desc.substring(start + 1, end);
-			if (imports.containsKey(clsName)) {
-				desc = desc.substring(0, start + 1) + imports.get(clsName).getDstPath() + desc.substring(end);
-				end = start + imports.get(clsName).getDstPath().length() + 1;
-			}
-			start = desc.indexOf('L', end + 1);
-		}
-		return desc;
-	}
-
-	private String getDesc(String desc) {
-		int start = desc.indexOf('L');
-		while (start != -1) {
-			int end = desc.indexOf(';', start);
-			String clsName = desc.substring(start + 1, end);
-			if (imports.containsKey(clsName)) {
-				desc = desc.substring(0, start + 1) + imports.get(clsName).getPath(getActualObfuscation()) +
-						desc.substring(end);
-				end = start + imports.get(clsName).getPath(getActualObfuscation()).length() + 1;
-			}
-			start = desc.indexOf('L', end + 1);
-		}
-		return desc;
+	public boolean apply(InstructionBuilder insnBuilder) {
+		return mode.apply(insnBuilder.build());
 	}
 
 	public ASMTweaksManager getManager() {
 		return mgr;
 	}
 
+	public int getCursor() {
+		return cursor;
+	}
+
+	public LabelRef createLabel() {
+		return new LabelRef(new LabelNode(new Label()));
+	}
+
+	public LabelRef getLabel() {
+		AbstractInsnNode node = mthdNode.instructions.get(cursor);
+		return (node instanceof LabelNode) ? new LabelRef((LabelNode) node) : null;
+	}
+
 	private interface Mode {
-		void apply(AbstractInsnNode node);
+
+		boolean apply(List<AbstractInsnNode> nodes);
 	}
 
 	private class SearchMode implements Mode {
 		@Override
-		public void apply(AbstractInsnNode node) {
+		public boolean apply(List<AbstractInsnNode> nodes) {
 			boolean found = false;
-			for (int pos = cursor; pos < mthdNode.instructions.size(); pos++) {
+			for (int pos = cursor + 1; pos < mthdNode.instructions.size(); pos++) {
 				AbstractInsnNode posNode = mthdNode.instructions.get(pos);
-//				logger.info("Searching at {}", ASMUtils.nodeToString(posNode));
-				if (ASMUtils.areNodesEqual(node, posNode)) {
-					cursor = pos;
+				if (ASMUtils.areNodesEqual(nodes.get(0), posNode)) {
 					found = true;
-					break;
+					int off = 1;
+					for (; pos + off < mthdNode.instructions.size() && off < nodes.size(); off++) {
+						AbstractInsnNode pos2Node = mthdNode.instructions.get(pos + off);
+						if (!ASMUtils.areNodesEqual(nodes.get(off), pos2Node)) {
+							found = false;
+							break;
+						}
+					}
+					if (found && off < nodes.size())
+						found = false;
+					if (found && pos + off >= mthdNode.instructions.size() && off < nodes.size())
+						found = false;
+					if (found) {
+						cursor = pos;
+						break;
+					}
 				}
 			}
-			if (!found) {
-				logger.error("Could not find node ({})", ASMUtils.nodeToString(node));
-				throw new MethodEditorException("Could not find node");
+			return found;
+		}
+	}
+
+	private class SearchExactMode extends SearchMode {
+		@Override
+		public boolean apply(List<AbstractInsnNode> nodes) {
+			if (!super.apply(nodes)) {
+				logger.error("Could not find nodes ({})", ASMUtils.nodeToString(nodes.get(0)));
+				throw new MethodEditorException("Could not find nodes");
 			}
+			return true;
 		}
 	}
 
 	private class RemoveMode implements Mode {
-
 		@Override
-		public void apply(AbstractInsnNode node) {
-//			logger.info("Removing node {}", ASMUtils.nodeToString(node));
-			AbstractInsnNode cursorNode = mthdNode.instructions.get(cursor);
-			if (!ASMUtils.areNodesEqual(node, cursorNode)) {
-				logger.error("Expected node does not match ({}, {})", ASMUtils.nodeToString(node),
-						ASMUtils.nodeToString(cursorNode));
+		public boolean apply(List<AbstractInsnNode> nodes) {
+			for (AbstractInsnNode node : nodes) {
+//			logger.info("Removing nodes {}", ASMUtils.nodeToString(nodes));
+				AbstractInsnNode cursorNode = mthdNode.instructions.get(cursor);
+				if (!ASMUtils.areNodesEqual(node, cursorNode)) {
+					return false;
+				}
+				mthdNode.instructions.remove(cursorNode);
+			}
+			return true;
+		}
+	}
+
+	private class RemoveExactMode extends RemoveMode {
+		@Override
+		public boolean apply(List<AbstractInsnNode> nodes) {
+			if (!super.apply(nodes)) {
+				logger.error("Expected node does not match");
 				throw new MethodEditorException("Expected node does not match");
 			}
-			mthdNode.instructions.remove(cursorNode);
+			return true;
 		}
 	}
 
 	private class InsertMode implements Mode {
 		@Override
-		public void apply(AbstractInsnNode node) {
-//			logger.info("Inserting node {}", ASMUtils.nodeToString(node));
-			if (mthdNode.instructions.size() > 0)
-				mthdNode.instructions.insert(mthdNode.instructions.get(cursor++), node);
-			else
-				mthdNode.instructions.add(node);
+		public boolean apply(List<AbstractInsnNode> nodes) {
+			for (AbstractInsnNode node : nodes) {
+//			logger.info("Inserting nodes {}", ASMUtils.nodeToString(nodes));
+				if (mthdNode.instructions.size() > 0) {
+					if (cursor < mthdNode.instructions.size())
+						mthdNode.instructions.insertBefore(mthdNode.instructions.get(cursor++), node);
+					else {
+						mthdNode.instructions.insert(mthdNode.instructions.getLast(), node);
+						cursor = mthdNode.instructions.size();
+					}
+				} else {
+					mthdNode.instructions.add(node);
+					cursor = 1;
+				}
+			}
+			return true;
 		}
 	}
 }

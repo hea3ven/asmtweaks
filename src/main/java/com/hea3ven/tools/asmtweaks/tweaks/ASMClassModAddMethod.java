@@ -7,8 +7,8 @@ import org.objectweb.asm.tree.MethodNode;
 import com.hea3ven.tools.asmtweaks.ASMClassMod;
 import com.hea3ven.tools.asmtweaks.ASMTweaksManager;
 import com.hea3ven.tools.asmtweaks.editors.MethodEditor;
-import com.hea3ven.tools.asmtweaks.editors.ObfuscationMode;
 import com.hea3ven.tools.mappings.MthdMapping;
+import com.hea3ven.tools.mappings.ObfLevel;
 
 public abstract class ASMClassModAddMethod implements ASMClassMod {
 	private final String targetCls;
@@ -28,12 +28,11 @@ public abstract class ASMClassModAddMethod implements ASMClassMod {
 
 	@Override
 	public void handle(ASMTweaksManager mgr, ClassNode cls) {
-		MthdMapping mthd = mgr.getMapping().getMthd(mthdName, mthdDesc);
-		String desc = mthd.getDesc().get(mgr.getObfuscationMode() != ObfuscationMode.DEOBFUSCATED);
+		MthdMapping mthd = mgr.getMapping().getMthd(mthdName, mthdDesc, ObfLevel.DEOBF);
+		String desc = mthd.getDesc().get(mgr.getObfuscationMode());
 		MethodNode method =
-				new MethodNode(Opcodes.ASM5, Opcodes.ACC_PUBLIC,
-						mthd.getName(mgr.getObfuscationMode() != ObfuscationMode.DEOBFUSCATED), desc, null,
-						null);
+				new MethodNode(Opcodes.ASM5, Opcodes.ACC_PUBLIC, mthd.getName(mgr.getObfuscationMode()), desc,
+						null, null);
 
 		handle(new MethodEditor(mgr, method));
 		cls.methods.add(method);

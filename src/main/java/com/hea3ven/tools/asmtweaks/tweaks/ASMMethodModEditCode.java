@@ -17,7 +17,7 @@ public abstract class ASMMethodModEditCode implements ASMMethodMod {
 
 	@Override
 	public String getClassName() {
-		return mthdName.substring(0, mthdName.lastIndexOf('/'));
+		return mthdName.substring(0, mthdName.lastIndexOf('.'));
 	}
 
 	@Override
