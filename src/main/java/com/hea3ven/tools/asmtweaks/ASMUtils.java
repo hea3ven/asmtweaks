@@ -34,7 +34,7 @@ public class ASMUtils {
 	}
 
 	public static byte[] writeClass(ClassNode classNode) {
-		ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+		ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
 		classNode.accept(writer);
 		return writer.toByteArray();
 	}

@@ -39,8 +39,6 @@ public class ASMContext {
 	}
 
 	public void addImport(String clsName) {
-//		ClsMapping cls = mapping.getCls(clsName);
-//		imports.put(cls.getDstName(), cls);
 		imports.put(clsName.substring(clsName.lastIndexOf('/') + 1), clsName);
 	}
 
@@ -62,20 +60,6 @@ public class ASMContext {
 	public String getDesc(ObfLevel level, String origDesc) {
 		origDesc = getExpandedImportsDesc(origDesc);
 		return mapping.parseDesc(level, origDesc).get(obfuscated);
-//		int start = origDesc.indexOf('L');
-//		while (start != -1) {
-//			int end = origDesc.indexOf(';', start);
-//			String clsName = origDesc.substring(start + 1, end);
-
-//			ClsMapping cls = mapping.getCls(clsName, ObfLevel.OBF);
-//			if (cls != null)
-//				clsName = cls.getPath(obfuscated);
-
-//			origDesc = origDesc.substring(0, start + 1) + clsName + origDesc.substring(end);
-//			end = start + clsName.length() + 1;
-//			start = origDesc.indexOf('L', end + 1);
-//		}
-//		return origDesc;
 	}
 
 	public String getCls(ObfLevel level, String origCls) {

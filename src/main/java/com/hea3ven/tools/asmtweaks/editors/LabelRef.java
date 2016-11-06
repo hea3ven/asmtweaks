@@ -1,15 +1,15 @@
 package com.hea3ven.tools.asmtweaks.editors;
 
-import org.objectweb.asm.tree.LabelNode;
+import org.objectweb.asm.Label;
 
 public class LabelRef {
-	private final LabelNode label;
+	private final Label label;
 
-	LabelRef(LabelNode label) {
+	LabelRef(Label label) {
 		this.label = label;
 	}
 
-	LabelNode getLabel() {
+	Label getLabel() {
 		return label;
 	}
 }

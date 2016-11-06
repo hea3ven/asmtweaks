@@ -92,12 +92,12 @@ public class MethodEditor {
 	}
 
 	public LabelRef createLabel() {
-		return new LabelRef(new LabelNode(new Label()));
+		return new LabelRef(new Label());
 	}
 
 	public LabelRef getLabel() {
 		AbstractInsnNode node = mthdNode.instructions.get(cursor);
-		return (node instanceof LabelNode) ? new LabelRef((LabelNode) node) : null;
+		return (node instanceof LabelNode) ? new LabelRef(((LabelNode) node).getLabel()) : null;
 	}
 
 	private interface Mode {

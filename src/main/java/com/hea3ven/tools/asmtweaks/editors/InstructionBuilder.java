@@ -1,6 +1,7 @@
 package com.hea3ven.tools.asmtweaks.editors;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -23,15 +24,22 @@ public class InstructionBuilder {
 	}
 
 	public List<AbstractInsnNode> build() {
-		Map<LabelNode, LabelNode> labels = insns.stream()
-				.filter(e -> e instanceof LabelNode)
-				.collect(
-						Collectors.toMap(e -> (LabelNode) e, e -> new LabelNode(((LabelNode) e).getLabel())));
+		Map<LabelNode, LabelNode> labels = new HashMap<LabelNode, LabelNode>() {
+			@Override
+			public LabelNode get(Object key) {
+				LabelNode value = super.get(key);
+				if (value == null) {
+					value = new LabelNode(((LabelNode) key).getLabel());
+					put((LabelNode) key, value);
+				}
+				return value;
+			}
+		};
 		return insns.stream().map(e -> e.clone(labels)).collect(Collectors.toList());
 	}
 
 	public InstructionBuilder label(LabelRef label) {
-		insns.add(label.getLabel());
+		insns.add(new LabelNode(label.getLabel()));
 		return this;
 	}
 
@@ -46,7 +54,7 @@ public class InstructionBuilder {
 	}
 
 	public InstructionBuilder jumpInsn(JumpInsnOpcodes opcode, LabelRef labelNode) {
-		insns.add(new JumpInsnNode(opcode.getOpcode(), labelNode.getLabel()));
+		insns.add(new JumpInsnNode(opcode.getOpcode(), new LabelNode(labelNode.getLabel())));
 		return this;
 	}
 
